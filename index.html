@@ -689,6 +689,38 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
   .hcta .btn{width:100%}
   .form{padding:26px 22px}
 }
+
+/* ── 휴대폰 최적화 ── */
+@media(max-width:1040px){
+  /* 히어로: 영상 전체가 보이도록 위아래 어둡게 덮던 층을 얇게 */
+  .hstage::after{background:
+    linear-gradient(180deg,rgba(8,5,3,.34) 0%,rgba(8,5,3,0) 16%),
+    linear-gradient(180deg,rgba(14,10,6,0) 80%,#0E0A06 100%)}
+}
+@media(max-width:760px){
+  /* 가로 손가락 밀기를 받는 영역: 세로 스크롤만 브라우저에 맡긴다 */
+  .vview,.gview{touch-action:pan-y}
+  /* 브랜드 영상: 카드를 화면 폭에 맞추고, 화살표는 영상 아래로 내려 영상 조작을 가리지 않게 */
+  #vcar .vcard{width:calc(100vw - 52px);opacity:.25;transform:scale(.92)}
+  #vcar .vcard.on{opacity:1;transform:none}
+  #vcar .vthumb{border-radius:14px}
+  #vcar .vnav{top:auto;bottom:2px;transform:none;width:40px;height:40px}
+  #vcar .vnav:hover{transform:none}
+  #vcar .vnav.pv{left:0}#vcar .vnav.nx{right:0}
+  #vcar .vcap{padding:0 50px;min-height:52px}
+  /* 메뉴 · 갤러리 화살표는 작게 */
+  #mcar .vnav{width:36px;height:36px}
+  #mcar .vnav.pv{left:0}#mcar .vnav.nx{right:0}
+  .gnav{width:38px;height:38px}
+}
+@media(max-width:640px){
+  /* 가로 영상 밴드: 글자가 영상을 덮지 않게 영상 아래로 */
+  .band{display:block;aspect-ratio:auto}
+  .band video{position:relative;inset:auto;display:block;height:auto;aspect-ratio:16/9;transform:none}
+  .band::after{top:0;left:0;right:0;bottom:auto;height:56.25vw;background:
+    linear-gradient(180deg,rgba(8,5,3,.28) 0%,rgba(8,5,3,0) 22%,rgba(8,5,3,0) 72%,#0E0A06 100%)}
+  .btxt{padding-top:4px;padding-bottom:34px}
+}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
   .rv{opacity:1;transform:none}.pill b{animation:none;color:#fff;background:none}
   .h1 .ln i,.hstage{animation:none!important;opacity:1;transform:none}
@@ -1317,6 +1349,15 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
 </div>
 
 <script>
+/* 가로 손가락 밀기: 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전 */
+function jdSwipe(el,prev,next){if(!el)return;var x0=null,y0=0;
+  el.addEventListener('touchstart',function(e){if(e.touches.length!==1){x0=null;return}
+    x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});
+  el.addEventListener('touchend',function(e){if(x0===null)return;var t=e.changedTouches[0],
+    dx=t.clientX-x0,dy=t.clientY-y0;x0=null;
+    if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2){if(dx<0)next();else prev()}},{passive:true});
+  el.addEventListener('touchcancel',function(){x0=null},{passive:true})}
+
 (function(){
   var items=['10년 동안 800번','800호점 돌파','2011년 론칭','동물복지 인증 원료육',
              '100만 유튜버가 다녀간 브랜드','치킨 + 피자 콤보','매경 100대 프랜차이즈 4년 연속'];
@@ -1418,6 +1459,7 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
   function nav(n){var was=anyPlaying();go(n);if(was){play(cards[i])}else{auto()}}
   car.querySelector('.pv').onclick=function(){nav(i-1)};
   car.querySelector('.nx').onclick=function(){nav(i+1)};
+  jdSwipe(view,function(){nav(i-1)},function(){nav(i+1)});
   cards.forEach(function(c,k){
     c.querySelector('.vplay').onclick=function(e){
       e.stopPropagation();
@@ -1461,6 +1503,7 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
   car.querySelector('.pv').onclick=function(){go(i-1);auto()};
   car.querySelector('.nx').onclick=function(){go(i+1);auto()};
   window.addEventListener('resize',function(){build();go(0)});
+  jdSwipe(view,function(){go(i-1);auto()},function(){go(i+1);auto()});
   build();go(0);auto();
 })();
 (function(){
@@ -1531,6 +1574,7 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
   });
   car.querySelector('.pv').onclick=function(){go(i-1);auto()};
   car.querySelector('.nx').onclick=function(){go(i+1);auto()};
+  jdSwipe(view,function(){go(i-1);auto()},function(){go(i+1);auto()});
   all.forEach(function(c){c.addEventListener('click',function(){
     var k=cards.indexOf(c);if(k>-1&&k!==i){go(k);auto()}})});
   window.addEventListener('resize',function(){go(i)});
