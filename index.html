@@ -1400,8 +1400,31 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
   for(var k=cards.length-1;k>0;k--){var j=Math.floor(Math.random()*(k+1));
     trk.appendChild(cards[j]);cards.splice(j,1)}
   cards=[].slice.call(trk.children);
+  function stop(c){ // 재생 중인 카드를 원래 썸네일로 되돌린다
+    if(!c.classList.contains('playing'))return;
+    var th=c.querySelector('.vthumb');th.innerHTML='';
+    (c._saved||[]).forEach(function(nd){th.appendChild(nd)});
+    c.classList.remove('playing');
+  }
+  function play(c){
+    if(c.classList.contains('playing'))return;
+    var th=c.querySelector('.vthumb'),vid=c.getAttribute('data-id');
+    clearInterval(timer);
+    c._saved=[].slice.call(th.childNodes);
+    c.classList.add('playing');
+    if(location.protocol==='file:'&&!car.querySelector('.vlocal')){
+      var n=document.createElement('p');n.className='vlocal';
+      n.textContent='로컬 파일에서는 유튜브가 재생을 막습니다. 서버에 올리면 이 자리에서 바로 재생됩니다.';
+      car.appendChild(n);}
+    th.innerHTML='<iframe allow="autoplay; encrypted-media" '+
+      'allowfullscreen src="https://www.youtube-nocookie.com/embed/'+vid+
+      '?autoplay=1&rel=0&modestbranding=1&playsinline=1"></iframe>';
+  }
+  function anyPlaying(){return cards.some(function(c){return c.classList.contains('playing')})}
   function go(n){
-    i=(n+cards.length)%cards.length;
+    var ni=(n+cards.length)%cards.length;
+    if(ni!==i)cards.forEach(stop); // 화면이 넘어가면 이전 영상은 멈춘다
+    i=ni;
     cards.forEach(function(c,k){c.classList.toggle('on',k===i)});
     var c=cards[i];
     trk.style.transform='translateX('+(view.clientWidth/2-(c.offsetLeft+c.offsetWidth/2))+'px)';
@@ -1409,23 +1432,18 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
     capN.textContent=(i+1)+' / '+cards.length;
   }
   function auto(){clearInterval(timer);timer=setInterval(function(){go(i+1)},6000)}
-  car.querySelector('.pv').onclick=function(){go(i-1);auto()};
-  car.querySelector('.nx').onclick=function(){go(i+1);auto()};
+  // 사용자가 넘길 때: 보던 영상이 있었으면 새 영상을 이어서 재생, 아니면 자동 넘김 유지
+  function nav(n){var was=anyPlaying();go(n);if(was){play(cards[i])}else{auto()}}
+  car.querySelector('.pv').onclick=function(){nav(i-1)};
+  car.querySelector('.nx').onclick=function(){nav(i+1)};
   cards.forEach(function(c,k){
-    c.querySelector('.vplay').onclick=function(){
-      if(k!==i){go(k);auto();return}
-      var vid=c.getAttribute('data-id');
-      clearInterval(timer);c.classList.add('playing');
-      if(location.protocol==='file:'&&!car.querySelector('.vlocal')){
-        var n=document.createElement('p');n.className='vlocal';
-        n.textContent='로컬 파일에서는 유튜브가 재생을 막습니다. 서버에 올리면 이 자리에서 바로 재생됩니다.';
-        car.appendChild(n);}
-      c.querySelector('.vthumb').innerHTML='<iframe allow="autoplay; encrypted-media" '+
-        'allowfullscreen src="https://www.youtube-nocookie.com/embed/'+vid+
-        '?autoplay=1&rel=0&modestbranding=1&playsinline=1"></iframe>';
+    c.querySelector('.vplay').onclick=function(e){
+      e.stopPropagation();
+      if(k!==i)go(k);
+      play(c);
     };
-    c.addEventListener('click',function(e){if(e.target.closest('.vplay'))return;
-      if(k!==i){go(k);auto()}});
+    c.addEventListener('click',function(e){if(e.target.closest('.vplay')||e.target.closest('iframe'))return;
+      if(k!==i)nav(k)});
   });
   cards.forEach(function(c){var im=c.querySelector('img');
     function fix(){if(im.naturalWidth&&im.naturalWidth<200&&im.src.indexOf('maxres')>-1){
