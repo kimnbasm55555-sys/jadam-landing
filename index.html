@@ -187,6 +187,7 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 /* 섹션 */
 .sec{padding:104px 0;position:relative;overflow:hidden}
 .sec.tint{background:var(--tint)}
+.sec.tint+.sec.tint{padding-top:24px}
 .sec.grad{background:var(--grad);color:#fff}
 .ctr{text-align:center;max-width:880px;margin:0 auto 52px;position:relative;z-index:2}
 .k{display:block;font-size:12px;font-weight:800;letter-spacing:.18em;margin-bottom:14px;
@@ -1229,26 +1230,6 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
   </div>
 </section>
 
-<!-- 프로세스 -->
-<section class="sec" id="process">
-  <div class="wrap">
-    <div class="ctr rv"><span class="k">PROCESS</span>
-      <h2 class="t"><span class="sm">상담부터 오픈까지</span>어떤 순서로 진행되는지<br>먼저 아셔야 합니다</h2></div>
-    <div class="steps rv">
-      <div class="step"><div class="no">01</div><b>상담 신청</b><p>온라인 폼 또는 전화</p></div>
-      <div class="step"><div class="no">02</div><b>지원 범위 확정</b><p>지원 항목 산정</p></div>
-      <div class="step key"><div class="no">03</div><b>정보공개서 제공</b><p>법정 숙려기간 14일</p></div>
-      <div class="step"><div class="no">04</div><b>가맹 계약</b><p></p></div>
-      <div class="step"><div class="no">05</div><b>교육 5일</b><p>전 제품 조리 실습</p></div>
-      <div class="step"><div class="no">06</div><b>전환 후 오픈</b><p>간판 · 시설 교체</p></div>
-    </div>
-    <div class="rv d1" style="margin-top:32px"><div class="ph r219"><i>EDUCATION</i></div></div>
-    <p style="margin-top:22px;font-size:14.5px;color:var(--mute);line-height:1.8">
-      가맹사업법상 정보공개서를 받으신 뒤 <b style="color:var(--ink)">14일의 숙려기간</b>이 지나야 계약이 가능합니다.
-      이 기간은 사장님을 위한 장치입니다.</p>
-  </div>
-</section>
-
 <!-- FAQ -->
 <section class="sec tint" id="faq">
   <div class="wrap">
@@ -1412,6 +1393,7 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
     clearInterval(timer);
     c._saved=[].slice.call(th.childNodes);
     c.classList.add('playing');
+    document.dispatchEvent(new CustomEvent('jd:play',{detail:car}));
     if(location.protocol==='file:'&&!car.querySelector('.vlocal')){
       var n=document.createElement('p');n.className='vlocal';
       n.textContent='로컬 파일에서는 유튜브가 재생을 막습니다. 서버에 올리면 이 자리에서 바로 재생됩니다.';
@@ -1451,6 +1433,13 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
     im.complete?fix():im.addEventListener('load',fix)});
   window.addEventListener('resize',function(){go(i)});
   go(0);auto();
+  // 다른 영상이 재생되거나 화면 밖으로 스크롤되면 멈춘다
+  document.addEventListener('jd:play',function(e){
+    if(e.detail!==car&&anyPlaying()){cards.forEach(stop);auto()}});
+  if(window.IntersectionObserver){
+    new IntersectionObserver(function(es){es.forEach(function(en){
+      if(!en.isIntersecting&&anyPlaying()){cards.forEach(stop);auto()}})},{threshold:.3}).observe(car);
+  }
 })();
 (function(){
   var car=document.getElementById('gcar');if(!car)return;
@@ -1475,20 +1464,39 @@ h2.t .sm{display:block;font-size:.52em;color:var(--mute);font-weight:500;margin-
   build();go(0);auto();
 })();
 (function(){
-  document.querySelectorAll('.ivid').forEach(function(v){
-    v.querySelector('.vplay').addEventListener('click',function(){
-      var id=v.getAttribute('data-id');
-      v.classList.add('playing');
-      v.innerHTML='<iframe allow="autoplay; encrypted-media" allowfullscreen '+
-        'src="https://www.youtube-nocookie.com/embed/'+id+
-        '?autoplay=1&rel=0&modestbranding=1&playsinline=1"></iframe>';
-      if(location.protocol==='file:'&&!v.parentNode.querySelector('.vlocal')){
-        var n=document.createElement('p');n.className='vlocal';
-        n.style.color='var(--mute)';
-        n.textContent='로컬 파일에서는 유튜브가 재생을 막습니다. 서버에 올리면 이 자리에서 바로 재생됩니다.';
-        v.parentNode.appendChild(n);}
-    });
+  var vids=[].slice.call(document.querySelectorAll('.ivid'));if(!vids.length)return;
+  function stop(v){ // 썸네일과 재생 버튼으로 되돌린다
+    if(!v.classList.contains('playing'))return;
+    v.innerHTML='';(v._saved||[]).forEach(function(nd){v.appendChild(nd)});
+    v.classList.remove('playing');
+  }
+  function play(v){
+    if(v.classList.contains('playing'))return;
+    vids.forEach(function(o){if(o!==v)stop(o)});
+    document.dispatchEvent(new CustomEvent('jd:play',{detail:v}));
+    var id=v.getAttribute('data-id');
+    v._saved=[].slice.call(v.childNodes);
+    v.classList.add('playing');
+    v.innerHTML='<iframe allow="autoplay; encrypted-media" allowfullscreen '+
+      'src="https://www.youtube-nocookie.com/embed/'+id+
+      '?autoplay=1&rel=0&modestbranding=1&playsinline=1"></iframe>';
+    if(location.protocol==='file:'&&!v.parentNode.querySelector('.vlocal')){
+      var n=document.createElement('p');n.className='vlocal';
+      n.style.color='var(--mute)';
+      n.textContent='로컬 파일에서는 유튜브가 재생을 막습니다. 서버에 올리면 이 자리에서 바로 재생됩니다.';
+      v.parentNode.appendChild(n);}
+  }
+  vids.forEach(function(v){
+    v.querySelector('.vplay').addEventListener('click',function(e){e.stopPropagation();play(v)});
   });
+  // 브랜드 영상 등 다른 영상이 재생되면 멈춘다
+  document.addEventListener('jd:play',function(e){vids.forEach(function(v){if(v!==e.detail)stop(v)})});
+  // 스크롤해서 화면 밖으로 넘어가면 멈춘다
+  if(window.IntersectionObserver){
+    var io=new IntersectionObserver(function(es){es.forEach(function(en){
+      if(!en.isIntersecting)stop(en.target)})},{threshold:.3});
+    vids.forEach(function(v){io.observe(v)});
+  }
 })();
 (function(){
   var car=document.getElementById('mcar');if(!car)return;
